@@ -1,4 +1,4 @@
-/* Copyright (c) 2013-2024. The SimGrid Team. All rights reserved.          */
+/* Copyright (c) 2013-2023. The SimGrid Team. All rights reserved.          */
 
 /* This program is free software; you can redistribute it and/or modify it
  * under the terms of the license (GNU LGPL) which comes with this package. */
@@ -87,8 +87,21 @@ void VivaldiZone::get_local_route(const NetPoint* src, const NetPoint* dst, Rout
     std::vector<double> dstCoords = netpoint_get_coords(dst);
 
     double euclidean_dist =
-        sqrt(euclidean_dist_comp(srcCoords[0], dstCoords[0]) + euclidean_dist_comp(srcCoords[1], dstCoords[1])) +
-        fabs(srcCoords[2]) + fabs(dstCoords[2]);
+        sqrt(euclidean_dist_comp(srcCoords[0], dstCoords[0]) + euclidean_dist_comp(srcCoords[1], dstCoords[1]));
+        
+    double z_1 = fabs(srcCoords[2]);
+    double z_2 = fabs(dstCoords[2]);
+
+    if ( euclidean_dist == 0)
+    {
+      euclidean_dist = 0.00001;
+    }
+
+    if (z_1!=z_2)
+    {
+      euclidean_dist+=z_1+z_2;
+    }        
+    
 
     XBT_DEBUG("Updating latency %f += %f", *lat, euclidean_dist);
     *lat += euclidean_dist / 1000.0; // From .ms to .s
