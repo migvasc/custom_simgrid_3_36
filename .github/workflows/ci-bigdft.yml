@@ -1,0 +1,51 @@
+name: CI BigDFT
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 20 * * 0'
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+    container:
+      image: bigdft/sdk
+      options: --user 0
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build and test BigDFT
+        run: |
+          set -e
+          #temporary fix for https://github.com/NVIDIA/nvidia-docker/issues/1631
+          apt-key adv --fetch-keys https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/3bf863cc.pub
+          ./tools/jenkins/ci-bigdft.sh
+
+      - name: Send the failure Message
+        if: ${{ failure() }}
+        uses: mattermost/action-mattermost-notify@master
+        with:
+          MATTERMOST_WEBHOOK_URL: ${{ secrets.MATTERMOST_WEBHOOK_URL }}
+          MATTERMOST_CHANNEL: ${{ secrets.MATTERMOST_CHANNEL}}
+          PAYLOAD: |-
+            {
+             "channel": "bot-office",
+             "attachments": [{
+               "color": "#FF0000",
+               "text": "@adegomme: BigDFT failed to build on simgrid/unstable docker image! See ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}",
+               "icon": "https://cdn3.iconfinder.com/data/icons/system-basic-vol-4-1/20/icon-note-attention-alt3-512.png"
+            }]}
+      - name: Send the success Message
+        if: ${{ success() }}
+        uses: mattermost/action-mattermost-notify@master
+        with:
+          MATTERMOST_WEBHOOK_URL: ${{ secrets.MATTERMOST_WEBHOOK_URL }}
+          MATTERMOST_CHANNEL: ${{ secrets.MATTERMOST_CHANNEL}}
+          PAYLOAD: |-
+            {
+             "channel": "bot-office",
+             "attachments": [{
+               "color": "#00FF00",
+               "text": "BigDFT successfully built on simgrid/unstable docker image! See ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            }]}

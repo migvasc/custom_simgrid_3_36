@@ -1,0 +1,60 @@
+name: Docker unstable
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '42 18 * * 0'
+
+jobs:
+  docker-simgrid:
+
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Login against a Docker registry except on PR
+      # https://github.com/docker/login-action
+      - name: Log into registry ${{ env.REGISTRY }}
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: build docker unstable
+        run: |
+          cd tools/docker
+          make unstable
+          docker push simgrid/unstable
+      - name: Send the failure message
+        if: ${{ failure() }}
+        uses: mattermost/action-mattermost-notify@master
+        with:
+          MATTERMOST_WEBHOOK_URL: ${{ secrets.MATTERMOST_WEBHOOK_URL }}
+          MATTERMOST_CHANNEL: ${{ secrets.MATTERMOST_CHANNEL}}
+          PAYLOAD: |-
+            {
+             "channel": "bot-office",
+             "attachments": [{
+               "color": "#FF0000",
+               "text": "Failure when building docker unstable! See ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}",
+               "icon": "https://cdn3.iconfinder.com/data/icons/system-basic-vol-4-1/20/icon-note-attention-alt3-512.png"
+            }]}
+      - name: Send the success message
+        if: ${{ success() }}
+        uses: mattermost/action-mattermost-notify@master
+        with:
+          MATTERMOST_WEBHOOK_URL: ${{ secrets.MATTERMOST_WEBHOOK_URL }}
+          MATTERMOST_CHANNEL: ${{ secrets.MATTERMOST_CHANNEL}}
+          PAYLOAD: |-
+            {
+             "channel": "bot-office",
+             "attachments": [{
+               "color": "#00FF00",
+               "text": "Docker unstable built and pushed successfully! See ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            }]}
+

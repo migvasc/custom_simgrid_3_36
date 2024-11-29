@@ -1,0 +1,47 @@
+name: CI Wrench
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 20 * * 0'
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+    container: simgrid/unstable
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build and test WRENCH
+        run: |
+          set -e
+          ./tools/jenkins/ci-wrench.sh
+
+      - name: Send the failure Message
+        if: ${{ failure() }}
+        uses: mattermost/action-mattermost-notify@master
+        with:
+          MATTERMOST_WEBHOOK_URL: ${{ secrets.MATTERMOST_WEBHOOK_URL }}
+          MATTERMOST_CHANNEL: ${{ secrets.MATTERMOST_CHANNEL}}
+          PAYLOAD: |-
+            {
+             "channel": "bot-office",
+             "attachments": [{
+               "color": "#FF0000",
+               "text": "@henricasanova: Wrench's git failed to build on simgrid/unstable docker image! See ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}",
+               "icon": "https://cdn3.iconfinder.com/data/icons/system-basic-vol-4-1/20/icon-note-attention-alt3-512.png"
+            }]}
+      - name: Send the success Message
+        if: ${{ success() }}
+        uses: mattermost/action-mattermost-notify@master
+        with:
+          MATTERMOST_WEBHOOK_URL: ${{ secrets.MATTERMOST_WEBHOOK_URL }}
+          MATTERMOST_CHANNEL: ${{ secrets.MATTERMOST_CHANNEL}}
+          PAYLOAD: |-
+            {
+             "channel": "bot-office",
+             "attachments": [{
+               "color": "#00FF00",
+               "text": "Wrench's git successfully built on simgrid/unstable docker image! See ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            }]}
